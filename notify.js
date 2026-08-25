@@ -11,7 +11,13 @@
 const { Notification, shell } = require('electron');
 
 function defaultSend(title, body, { url } = {}) {
-  if (!Notification.isSupported()) return;
+  // require('electron') outside an Electron app process (e.g. run-once.js
+  // under plain `node`) doesn't give a real Notification class. Fall back to
+  // logging instead of throwing, so headless runs stay headless.
+  if (typeof Notification !== 'function' || !Notification.isSupported()) {
+    console.log(`[notify] ${title} — ${body}`);
+    return;
+  }
   const n = new Notification({ title, body });
   if (url) n.on('click', () => shell.openExternal(url));
   n.show();
