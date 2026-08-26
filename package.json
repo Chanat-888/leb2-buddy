@@ -11,6 +11,9 @@
   "author": "",
   "license": "ISC",
   "type": "commonjs",
+  "build": {
+    "appId": "com.pan.leb2buddy"
+  },
   "dependencies": {
     "better-sqlite3": "^13.0.3",
     "electron": "^44.0.0",

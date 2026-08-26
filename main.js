@@ -32,6 +32,11 @@ if (!app.requestSingleInstanceLock()) {
   // same persistent Chrome profile at once.
   app.quit();
 } else {
+  // Windows groups toasts by this id and uses it to pick the sender name
+  // shown on them — without it they show up as "Electron". Must match
+  // package.json's build.appId once electron-builder is wired up.
+  app.setAppUserModelId('com.pan.leb2buddy');
+
   let win = null;
   let db = null;
   let isQuitting = false;

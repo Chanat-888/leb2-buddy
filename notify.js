@@ -8,9 +8,20 @@
 // implementation is the only place electron.Notification / electron.shell
 // are touched.
 
-const { Notification, shell } = require('electron');
+const { Notification, shell, BrowserWindow } = require('electron');
 
-function defaultSend(title, body, { url } = {}) {
+// Same show/restore/focus sequence as main.js's showWindow — duplicated
+// rather than imported so notify.js stays usable outside a full app (e.g.
+// run-once.js, test-notify.js), where there's no window and this is a no-op.
+function focusAppWindow() {
+  const [win] = BrowserWindow.getAllWindows();
+  if (!win) return;
+  if (win.isMinimized()) win.restore();
+  win.show();
+  win.focus();
+}
+
+function defaultSend(title, body, { url, focusApp } = {}) {
   // require('electron') outside an Electron app process (e.g. run-once.js
   // under plain `node`) doesn't give a real Notification class. Fall back to
   // logging instead of throwing, so headless runs stay headless.
@@ -20,6 +31,7 @@ function defaultSend(title, body, { url } = {}) {
   }
   const n = new Notification({ title, body });
   if (url) n.on('click', () => shell.openExternal(url));
+  else if (focusApp) n.on('click', focusAppWindow);
   n.show();
 }
 
@@ -82,8 +94,7 @@ function notifyEvents(events, send = defaultSend) {
     } else {
       const title = config.batchTitle(group.length);
       const body = group.map((e) => `${e.classCode} ${e.title}`).join(', ');
-      // TODO(step 6): open the app window on click instead of nothing.
-      send(title, body);
+      send(title, body, { focusApp: true });
     }
   }
 }
