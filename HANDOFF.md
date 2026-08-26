@@ -12,8 +12,32 @@ submission status off a page.
 
 ## Current state
 
-`scrape.js` exists and works: logs in via a persistent Chrome profile, pulls the
-class list and every assignment row, prints JSON. Nothing else is built yet.
+Steps 1–6 are done — scrape, store, diff, notify, schedule, and a working
+Electron UI, wired end to end:
+
+- `scrape.js` — logs in via a persistent Chrome profile, pulls the class list
+  and every assignment row, prints JSON. `--login` opens a headed window for
+  the one-time manual SSO sign-in.
+- `db.js` — SQLite storage (`~/.leb2-buddy/leb2.db`), keyed on `(kind, item_id)`.
+  Never deletes rows.
+- `diff.js` — compares a fresh scrape against the DB and returns announceable
+  events (`new`, `submitted`, `due_soon_48h`, `due_soon_6h`), silenced on the
+  very first scrape so day one isn't a wall of toasts.
+- `notify.js` — turns those events into Windows toast notifications (grouped
+  by type), plus a separate 3-consecutive-failure check.
+- `cycle.js` / `run-once.js` — the full scrape → save → diff → notify cycle;
+  `run-once.js` runs it headless from the CLI for testing.
+- `scheduler.js` — runs the cycle every 3 hours inside Electron, anchored to
+  `scrape_runs.started_at` (not a bare `setInterval`) so a slept laptop
+  doesn't drift the cadence.
+- `main.js` / `preload.js` / `renderer/` — the Electron UI: a single window
+  over the same SQLite file, a tray icon so the scheduler survives the window
+  being closed, and `app.setLoginItemSettings({ openAtLogin: true, args:
+  ['--hidden'] })` so it starts on login without popping a window (the
+  `--hidden` arg makes `main.js` create the window with `show: false`; the
+  tray is still there to open it).
+
+Nothing else is built yet — see "Build order" below for what's left (7–9).
 
 ## Findings from investigating LEB2 (already verified — do not re-investigate)
 
@@ -74,11 +98,41 @@ Asia/Bangkok (UTC+7, no DST). Store UTC, display Bangkok. `"No Due Date"` and
 ```
 Playwright (persistent Chrome profile)
    └─> scrape /class + /class/{id}/activity
-         └─> SQLite: assignments(class_id, activity_id, title,
-                     due_at_utc, status, first_seen, last_seen)
+         └─> SQLite: classes(class_id, code, name, section,
+                      first_seen, last_seen)
+                      assignments(kind, item_id, class_id, title,
+                      publish_at, due_at, status_raw, prev_status_raw,
+                      submitted, url, first_seen, last_seen)
+                      scrape_runs(id, started_at, ok, class_count,
+                      row_count, error)
                ├─> diff vs last run ──> notification
-               └─> Electron UI reads DB ──> character + today's list
+               └─> Electron UI reads DB ──> character + 7-day agenda
 ```
+
+`assignments` is keyed on `(kind, item_id)` — `kind` is `'activity'` or
+`'quiz'`, `item_id` is LEB2's own id. Never title; instructors rename
+assignments.
+
+### UI (dashboard.js + renderer/)
+
+The window shows a character (colored by state) and an agenda list, read
+from `dashboard.getDashboardData(db)`:
+
+- **Character state** — `ok` / `warning` / `urgent` / `error`. Driven by the
+  soonest not-submitted due date (`< 6h` urgent, `< 48h` warning) and by
+  overdue-not-submitted items, but only while they're overdue by **less than
+  7 days** — older than that is a lost cause and shouldn't make the character
+  panic. Three consecutive failed scrapes forces `error` ("CAN'T REACH LEB2"),
+  regardless of due dates.
+- **7-day agenda** — grouped by day (`Today` / `Tomorrow` / weekday name).
+  Today's group also folds in not-submitted items overdue by less than 7 days,
+  so a missed item doesn't just vanish the day after. Future days show only
+  not-submitted items.
+- **Missed** — not-submitted items overdue by 7+ days, dimmed, kept out of
+  the day grouping and out of the character state.
+- **Upcoming** — not-submitted items due 8–60 days out, grouped by date,
+  collapsed by default behind an "Upcoming (N)" toggle. Expanded/collapsed
+  state persists across launches via the renderer's `localStorage`.
 
 Rules:
 - The scraper only writes. A separate diff step decides what is worth announcing.
@@ -94,6 +148,7 @@ Rules:
 
 - **Node, not Python.** Bundling Python into a desktop installer is not worth it.
 - **Electron + electron-builder.** Fat but produces a working `.exe` in one command.
+  (`electron-builder` itself isn't wired up yet — see step 8.)
 - **`better-sqlite3`** for storage. No database server.
 - **Windows toast notifications for v1**, not Discord. Discord means every user
   pastes a webhook URL — the worst step in any setup flow. Discord becomes an
@@ -106,25 +161,38 @@ Rules:
 ## Build order
 
 1. ~~`scrape.js` — standalone, prints JSON~~ **done**
-2. `db.js` — SQLite schema, keyed on activityId, dates UTC
-3. `diff.js` — compare runs, return announceable changes
-4. `notify.js` — Electron `new Notification()`
-5. Scheduler — `setInterval` + run-on-launch + `app.setLoginItemSettings({openAtLogin:true})`
-6. UI — Electron window on the same SQLite file: character, today's list, nothing more
-7. First-run screen — "Connect LEB2" → headed Playwright → wait for `.class-card` → close
-8. `electron-builder --win` → NSIS installer
+2. ~~`db.js` — SQLite schema, keyed on activityId, dates UTC~~ **done**
+3. ~~`diff.js` — compare runs, return announceable changes~~ **done**
+4. ~~`notify.js` — Electron `new Notification()`~~ **done**
+5. ~~Scheduler — `setInterval` + run-on-launch + `app.setLoginItemSettings`~~ **done**
+6. ~~UI — Electron window on the same SQLite file: character, 7-day agenda,
+   Missed, Upcoming~~ **done**
+7. First-run screen — "Connect LEB2" → headed Playwright → wait for
+   `.class-card` → close. **Not built.** Right now a missing/expired session
+   just surfaces as the generic 3-failures error state (see Security below) —
+   there's no in-app way to re-run `scrape.js --login` yet.
+8. `electron-builder --win` → NSIS installer. **Not built** — no
+   `electron-builder` devDependency or build config yet.
 9. `electron-updater` → GitHub Releases (needed *before* distributing; when LEB2
-   changes their HTML, every copy breaks the same day)
+   changes their HTML, every copy breaks the same day). **Not built.**
 
 ## Security — non-negotiable
 
 - Session state goes in `app.getPath('userData')`, never the project folder.
+  (Currently the Playwright profile and the SQLite DB both live under
+  `~/.leb2-buddy/`, outside the repo — same idea, done before `userData` was
+  wired up. Fine as-is, just note the actual path if this gets revisited.)
 - `.gitignore` the profile directory **before the first commit**. It holds a live
   KMUTT session, and the LEB2 password is the university intranet password.
+  (`*.db` and `node_modules/` are gitignored; the browser profile lives outside
+  the repo entirely, so it was never a git risk to begin with.)
 - Never collect other users' credentials. If shared, each person runs their own
   copy against their own browser profile.
 - Handle "session expired" as a visible UI state with a Reconnect button. Users
-  hit this monthly; silent failure means they think it works while it shows nothing.
+  hit this monthly; silent failure means they think it works while it shows
+  nothing. **Still open** — `scrape.js` already distinguishes "not logged in"
+  in its error message, but the UI doesn't surface it distinctly from any
+  other failure yet. This is step 7's job.
 
 ## Open questions for the user
 
@@ -138,5 +206,5 @@ Rules:
 ## Suggested skills
 
 - `project-intake` — if scope shifts or the character/UI direction needs pinning down
-- `frontend-design` — for step 6, the Electron UI and character screen
+- `frontend-design` — for step 7, the first-run "Connect LEB2" screen
 - `handoff` — when compacting this session for the next one

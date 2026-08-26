@@ -44,11 +44,12 @@ if (!app.requestSingleInstanceLock()) {
     win.focus();
   }
 
-  function createWindow() {
+  function createWindow(hidden) {
     win = new BrowserWindow({
       width: 420,
       height: 640,
       resizable: false,
+      show: !hidden,
       webPreferences: {
         preload: path.join(__dirname, 'preload.js'),
         contextIsolation: true,
@@ -81,8 +82,12 @@ if (!app.requestSingleInstanceLock()) {
   }
 
   app.whenReady().then(() => {
+    // Launch on login, but hidden — the tray is enough, a window popping up
+    // at every boot would be annoying. The scheduler runs either way.
+    app.setLoginItemSettings({ openAtLogin: true, args: ['--hidden'] });
+
     db = openDb();
-    createWindow();
+    createWindow(process.argv.includes('--hidden'));
     createTray();
     ({ triggerNow } = startScheduler(db));
 
