@@ -112,4 +112,4 @@ function checkFailureStreak(db, send = defaultSend) {
   return true;
 }
 
-module.exports = { notifyEvents, checkFailureStreak };
+module.exports = { notifyEvents, checkFailureStreak, currentFailureStreak };

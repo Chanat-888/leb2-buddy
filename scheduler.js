@@ -22,20 +22,28 @@ function isDue(db, intervalMs) {
 function startScheduler(db, { intervalMs = THREE_HOURS_MS, cycleFn = runCycle } = {}) {
   let running = false;
 
-  const tick = async () => {
-    if (running) return; // previous cycle still in flight
-    if (!isDue(db, intervalMs)) return;
+  // Shared by the timer and any manual trigger (e.g. a UI "check now"
+  // button), so the two can never spawn overlapping scrapes against the
+  // same persistent Chrome profile. Returns null if a cycle was already
+  // in flight rather than queuing — the caller just missed this one.
+  const runNow = async () => {
+    if (running) return null;
     running = true;
     try {
-      await cycleFn(db);
+      return await cycleFn(db);
     } finally {
       running = false;
     }
   };
 
+  const tick = async () => {
+    if (!isDue(db, intervalMs)) return;
+    await runNow();
+  };
+
   tick(); // launch check — runs immediately only if actually due
   const timer = setInterval(tick, intervalMs);
-  return () => clearInterval(timer);
+  return { stop: () => clearInterval(timer), triggerNow: runNow };
 }
 
 module.exports = { startScheduler };

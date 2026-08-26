@@ -4,7 +4,12 @@
       "Bash(node -e \"console.log\\(process.version\\)\")",
       "Bash(npm install *)",
       "Bash(node *)",
-      "Bash(echo \"exit code: $?\")"
-    ]
+      "Bash(echo \"exit code: $?\")",
+      "PowerShell(Get-Process *)",
+      "Bash(kill 113)",
+      "Bash(powershell -NoProfile -Command \"Get-Process electron -ErrorAction SilentlyContinue | Stop-Process -Force\")",
+      "Bash(powershell -NoProfile -Command \"Get-ChildItem -Path 'D:\\\\dev\\\\leb2-buddy' -File | Select-Object Name, Length, LastWriteTime | Format-Table -AutoSize\")"
+    ],
+    "defaultMode": "bypassPermissions"
   }
 }
