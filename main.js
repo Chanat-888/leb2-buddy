@@ -89,7 +89,11 @@ if (!app.requestSingleInstanceLock()) {
   app.whenReady().then(() => {
     // Launch on login, but hidden — the tray is enough, a window popping up
     // at every boot would be annoying. The scheduler runs either way.
-    app.setLoginItemSettings({ openAtLogin: true, args: ['--hidden'] });
+    app.setLoginItemSettings({
+      openAtLogin: true,
+      path: process.execPath,
+      args: app.isPackaged ? ['--hidden'] : [app.getAppPath(), '--hidden'],
+    });
 
     db = openDb();
     createWindow(process.argv.includes('--hidden'));
