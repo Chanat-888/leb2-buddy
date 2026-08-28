@@ -172,7 +172,12 @@ Rules:
    just surfaces as the generic 3-failures error state (see Security below) —
    there's no in-app way to re-run `scrape.js --login` yet.
 8. `electron-builder --win` → NSIS installer. **Not built** — no
-   `electron-builder` devDependency or build config yet.
+   `electron-builder` devDependency or build config yet. After the first
+   packaged build, check the notification sender name — in dev mode toasts
+   show "Electron" because there's no Start Menu shortcut registered with the
+   `com.pan.leb2buddy` AppUserModelID yet (`setAppUserModelId` alone isn't
+   enough; Windows resolves the toast's display name from a shortcut). Should
+   self-resolve once the NSIS installer creates that shortcut.
 9. `electron-updater` → GitHub Releases (needed *before* distributing; when LEB2
    changes their HTML, every copy breaks the same day). **Not built.**
 
