@@ -35,7 +35,7 @@ async function runCycle(db, scrapeFn = runScrape) {
     const result = await scrapeFn();
     const events = diffScrape(db, result); // read old state before saving
     saveScrape(db, result);
-    notifyEvents(events);
+    notifyEvents(events, db);
     return {
       ok: true,
       startedAt,

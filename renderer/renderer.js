@@ -27,6 +27,12 @@ const lastCheckedEl = document.getElementById('last-checked');
 const errorBannerEl = document.getElementById('error-banner');
 const todayListEl = document.getElementById('today-list');
 const refreshBtn = document.getElementById('refresh-btn');
+const settingsBtn = document.getElementById('settings-btn');
+const settingsPanel = document.getElementById('settings-panel');
+const discordWebhookInput = document.getElementById('discord-webhook-input');
+const settingsSaveBtn = document.getElementById('settings-save-btn');
+const settingsTestBtn = document.getElementById('settings-test-btn');
+const settingsStatusEl = document.getElementById('settings-status');
 
 function renderTodayItem(item) {
   const li = document.createElement('li');
@@ -159,6 +165,30 @@ refreshBtn.addEventListener('click', async () => {
     refreshBtn.disabled = false;
     refreshBtn.textContent = 'Check now';
   }
+});
+
+settingsBtn.addEventListener('click', async () => {
+  const opening = settingsPanel.hidden;
+  settingsPanel.hidden = !opening;
+  if (opening) discordWebhookInput.value = (await window.leb2.getDiscordWebhookUrl()) || '';
+});
+
+settingsSaveBtn.addEventListener('click', async () => {
+  await window.leb2.setDiscordWebhookUrl(discordWebhookInput.value.trim());
+  settingsStatusEl.textContent = 'Saved';
+  setTimeout(() => { settingsStatusEl.textContent = ''; }, 2000);
+});
+
+settingsTestBtn.addEventListener('click', async () => {
+  const url = discordWebhookInput.value.trim();
+  if (!url) {
+    settingsStatusEl.textContent = 'Enter a webhook URL first';
+    return;
+  }
+  settingsStatusEl.textContent = 'Sending…';
+  const result = await window.leb2.sendTestDiscordMessage(url);
+  settingsStatusEl.textContent = result.ok ? 'Test message sent' : `Failed: ${result.error}`;
+  setTimeout(() => { settingsStatusEl.textContent = ''; }, 3000);
 });
 
 window.addEventListener('focus', refresh);

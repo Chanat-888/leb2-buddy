@@ -9,6 +9,7 @@
 // are touched.
 
 const { Notification, shell, BrowserWindow } = require('electron');
+const { getSetting } = require('./db.js');
 
 // Same show/restore/focus sequence as main.js's showWindow — duplicated
 // rather than imported so notify.js stays usable outside a full app (e.g.
@@ -73,9 +74,40 @@ const TYPE_CONFIG = {
   },
 };
 
+// Best-effort mirror of a notification to Discord, if the user has pasted a
+// webhook URL into settings. Never awaited by callers and never throws — a
+// dead/misconfigured webhook must not break the scrape cycle.
+function postToDiscord(webhookUrl, title, body) {
+  fetch(webhookUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ content: `**${title}**\n${body}` }),
+  }).catch(() => {});
+}
+
+// Unlike postToDiscord, this is awaited by its caller (the settings panel's
+// "Send test message" button) and reports success/failure instead of
+// swallowing errors, so the user gets feedback on a bad webhook URL.
+async function sendTestMessage(webhookUrl) {
+  try {
+    const res = await fetch(webhookUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: '**LEB2 Buddy** — test message' }),
+    });
+    if (!res.ok) return { ok: false, error: `HTTP ${res.status}` };
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+}
+
 // Groups notify:true events by type and emits one notification per group —
 // one event gets the detailed single-item copy, 2+ get a summary line.
-function notifyEvents(events, send = defaultSend) {
+// `db` is optional so this stays usable in contexts with no settings to
+// read (e.g. unit tests) — Discord delivery is simply skipped then.
+function notifyEvents(events, db, send = defaultSend) {
+  const webhookUrl = db ? getSetting(db, 'discordWebhookUrl') : null;
   const groups = new Map();
   for (const e of events) {
     if (!e.notify) continue;
@@ -87,15 +119,17 @@ function notifyEvents(events, send = defaultSend) {
 
   for (const [type, group] of groups) {
     const config = TYPE_CONFIG[type];
+    let title, body;
     if (group.length === 1) {
       const e = group[0];
-      const { title, body } = config.single(e);
+      ({ title, body } = config.single(e));
       send(title, body, { url: e.url });
     } else {
-      const title = config.batchTitle(group.length);
-      const body = group.map((e) => `${e.classCode} ${e.title}`).join(', ');
+      title = config.batchTitle(group.length);
+      body = group.map((e) => `${e.classCode} ${e.title}`).join(', ');
       send(title, body, { focusApp: true });
     }
+    if (webhookUrl) postToDiscord(webhookUrl, title, body);
   }
 }
 
@@ -123,4 +157,4 @@ function checkFailureStreak(db, send = defaultSend) {
   return true;
 }
 
-module.exports = { notifyEvents, checkFailureStreak, currentFailureStreak };
+module.exports = { notifyEvents, checkFailureStreak, currentFailureStreak, sendTestMessage };

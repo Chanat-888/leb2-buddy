@@ -5,9 +5,10 @@
 const path = require('path');
 const { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain } = require('electron');
 
-const { openDb } = require('./db.js');
+const { openDb, getSetting, setSetting } = require('./db.js');
 const { startScheduler } = require('./scheduler.js');
 const { getDashboardData } = require('./dashboard.js');
+const { sendTestMessage } = require('./notify.js');
 
 // Placeholder tray icon: a solid colored square, same "colored box" spirit
 // as the in-window character. Built as a raw BGRA bitmap so no icon asset
@@ -102,6 +103,9 @@ if (!app.requestSingleInstanceLock()) {
 
     ipcMain.handle('dashboard:get', () => getDashboardData(db));
     ipcMain.handle('cycle:run', () => triggerNow());
+    ipcMain.handle('settings:getDiscordWebhookUrl', () => getSetting(db, 'discordWebhookUrl'));
+    ipcMain.handle('settings:setDiscordWebhookUrl', (e, url) => setSetting(db, 'discordWebhookUrl', url));
+    ipcMain.handle('settings:sendTestDiscordMessage', (e, url) => sendTestMessage(url));
   });
 
   // A second launch attempt reaches here instead of starting its own app —

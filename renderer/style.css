@@ -59,6 +59,11 @@ body {
   color: var(--muted);
 }
 
+.toolbar-buttons {
+  display: flex;
+  gap: 8px;
+}
+
 #refresh-btn {
   background: var(--accent);
   color: white;
@@ -72,6 +77,82 @@ body {
 #refresh-btn:disabled {
   opacity: 0.6;
   cursor: default;
+}
+
+#settings-btn {
+  background: none;
+  border: 1px solid var(--muted);
+  color: var(--text);
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.settings-panel {
+  margin: 0 16px 8px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: var(--panel);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.settings-panel label {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.settings-panel input {
+  background: var(--bg);
+  border: 1px solid var(--muted);
+  color: var(--text);
+  border-radius: 4px;
+  padding: 6px 8px;
+  font-size: 12px;
+}
+
+.settings-webhook-row {
+  display: flex;
+  gap: 8px;
+}
+
+.settings-webhook-row input {
+  flex: 1;
+  min-width: 0;
+}
+
+#settings-test-btn {
+  background: none;
+  border: 1px solid var(--muted);
+  color: var(--text);
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.settings-panel-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#settings-save-btn {
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.settings-status {
+  font-size: 12px;
+  color: var(--ok);
 }
 
 .error-banner {

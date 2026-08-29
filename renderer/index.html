@@ -12,7 +12,22 @@
 
   <div class="toolbar">
     <span id="last-checked" class="last-checked"></span>
-    <button id="refresh-btn">Check now</button>
+    <div class="toolbar-buttons">
+      <button id="refresh-btn">Check now</button>
+      <button id="settings-btn" title="Settings">⚙</button>
+    </div>
+  </div>
+
+  <div id="settings-panel" class="settings-panel" hidden>
+    <label for="discord-webhook-input">Discord webhook URL</label>
+    <div class="settings-webhook-row">
+      <input id="discord-webhook-input" type="text" placeholder="https://discord.com/api/webhooks/..." />
+      <button id="settings-test-btn">Send test message</button>
+    </div>
+    <div class="settings-panel-actions">
+      <button id="settings-save-btn">Save</button>
+      <span id="settings-status" class="settings-status"></span>
+    </div>
   </div>
 
   <div id="error-banner" class="error-banner" hidden></div>

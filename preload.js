@@ -7,4 +7,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld('leb2', {
   getDashboard: () => ipcRenderer.invoke('dashboard:get'),
   runCycle: () => ipcRenderer.invoke('cycle:run'),
+  getDiscordWebhookUrl: () => ipcRenderer.invoke('settings:getDiscordWebhookUrl'),
+  setDiscordWebhookUrl: (url) => ipcRenderer.invoke('settings:setDiscordWebhookUrl', url),
+  sendTestDiscordMessage: (url) => ipcRenderer.invoke('settings:sendTestDiscordMessage', url),
 });
