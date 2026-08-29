@@ -85,6 +85,40 @@ function postToDiscord(webhookUrl, title, body) {
   }).catch(() => {});
 }
 
+// Renders the dashboard's week view (7-day agenda + missed count) as plain,
+// readable text for a Discord message — no JSON, no upcoming section (out of
+// scope per the summary button's spec).
+function formatWeekSummary(week) {
+  const lines = ['**LEB2 Buddy — Weekly Summary**'];
+  const nonEmptyDays = week.days.filter((d) => d.items.length > 0);
+
+  if (nonEmptyDays.length === 0) {
+    lines.push('Nothing due this week.');
+  } else {
+    for (const day of nonEmptyDays) {
+      lines.push('', `**${day.label}**`);
+      for (const item of day.items) {
+        const due = item.dueAt ? formatBangkok(item.dueAt) : 'No due date';
+        const check = item.submitted ? '[x] ' : '';
+        lines.push(`${check}${item.classCode} ${item.title} — due ${due}`);
+      }
+    }
+  }
+
+  lines.push('', `Missed: ${week.missed.length}`);
+  return lines.join('\n');
+}
+
+// Same fire-and-forget, fail-silent delivery as postToDiscord — a dead or
+// misconfigured webhook must not surface an error to the user here either.
+function postSummaryToDiscord(webhookUrl, week) {
+  fetch(webhookUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ content: formatWeekSummary(week) }),
+  }).catch(() => {});
+}
+
 // Unlike postToDiscord, this is awaited by its caller (the settings panel's
 // "Send test message" button) and reports success/failure instead of
 // swallowing errors, so the user gets feedback on a bad webhook URL.
@@ -157,4 +191,10 @@ function checkFailureStreak(db, send = defaultSend) {
   return true;
 }
 
-module.exports = { notifyEvents, checkFailureStreak, currentFailureStreak, sendTestMessage };
+module.exports = {
+  notifyEvents,
+  checkFailureStreak,
+  currentFailureStreak,
+  sendTestMessage,
+  postSummaryToDiscord,
+};

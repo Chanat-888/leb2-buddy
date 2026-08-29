@@ -32,7 +32,15 @@ const settingsPanel = document.getElementById('settings-panel');
 const discordWebhookInput = document.getElementById('discord-webhook-input');
 const settingsSaveBtn = document.getElementById('settings-save-btn');
 const settingsTestBtn = document.getElementById('settings-test-btn');
+const settingsSendSummaryBtn = document.getElementById('settings-send-summary-btn');
 const settingsStatusEl = document.getElementById('settings-status');
+
+function updateSendSummaryDisabled() {
+  settingsSendSummaryBtn.disabled = discordWebhookInput.value.trim() === '';
+}
+
+discordWebhookInput.addEventListener('input', updateSendSummaryDisabled);
+updateSendSummaryDisabled();
 
 function renderTodayItem(item) {
   const li = document.createElement('li');
@@ -170,7 +178,10 @@ refreshBtn.addEventListener('click', async () => {
 settingsBtn.addEventListener('click', async () => {
   const opening = settingsPanel.hidden;
   settingsPanel.hidden = !opening;
-  if (opening) discordWebhookInput.value = (await window.leb2.getDiscordWebhookUrl()) || '';
+  if (opening) {
+    discordWebhookInput.value = (await window.leb2.getDiscordWebhookUrl()) || '';
+    updateSendSummaryDisabled();
+  }
 });
 
 settingsSaveBtn.addEventListener('click', async () => {
@@ -189,6 +200,12 @@ settingsTestBtn.addEventListener('click', async () => {
   const result = await window.leb2.sendTestDiscordMessage(url);
   settingsStatusEl.textContent = result.ok ? 'Test message sent' : `Failed: ${result.error}`;
   setTimeout(() => { settingsStatusEl.textContent = ''; }, 3000);
+});
+
+settingsSendSummaryBtn.addEventListener('click', async () => {
+  await window.leb2.sendDashboardSummary();
+  settingsStatusEl.textContent = 'Summary sent';
+  setTimeout(() => { settingsStatusEl.textContent = ''; }, 2000);
 });
 
 window.addEventListener('focus', refresh);

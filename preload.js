@@ -10,4 +10,5 @@ contextBridge.exposeInMainWorld('leb2', {
   getDiscordWebhookUrl: () => ipcRenderer.invoke('settings:getDiscordWebhookUrl'),
   setDiscordWebhookUrl: (url) => ipcRenderer.invoke('settings:setDiscordWebhookUrl', url),
   sendTestDiscordMessage: (url) => ipcRenderer.invoke('settings:sendTestDiscordMessage', url),
+  sendDashboardSummary: () => ipcRenderer.invoke('settings:sendDashboardSummary'),
 });
