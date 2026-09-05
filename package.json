@@ -5,6 +5,7 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
+    "dist": "electron-builder --win",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -12,11 +13,27 @@
   "license": "ISC",
   "type": "commonjs",
   "build": {
-    "appId": "com.pan.leb2buddy"
+    "appId": "com.pan.leb2buddy",
+    "productName": "LEB2 Buddy",
+    "npmRebuild": false,
+    "asarUnpack": [
+      "scrape.js",
+      "node_modules/playwright/**/*",
+      "node_modules/playwright-core/**/*"
+    ],
+    "win": {
+      "target": "nsis"
+    },
+    "nsis": {
+      "perMachine": false
+    }
   },
   "dependencies": {
     "better-sqlite3": "^13.0.3",
-    "electron": "^44.0.0",
     "playwright": "^1.62.1"
+  },
+  "devDependencies": {
+    "electron": "^44.0.0",
+    "electron-builder": "^25.1.8"
   }
 }

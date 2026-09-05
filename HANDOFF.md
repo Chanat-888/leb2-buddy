@@ -154,7 +154,8 @@ Rules:
   pastes a webhook URL — the worst step in any setup flow. Discord becomes an
   optional toggle later.
 - **`channel: 'chrome'`** in Playwright to reuse installed Chrome and save ~150MB.
-  Fall back to bundled Chromium if absent.
+  No bundled-Chromium fallback — if Chrome isn't installed, `scrape.js` throws
+  a plain-English error telling the user to install it (see step 8).
 - Runs on the user's own PC. Not a VPS — SSO login cannot be automated, and a
   session cookie should not live on someone else's hardware.
 
@@ -171,13 +172,25 @@ Rules:
    `.class-card` → close. **Not built.** Right now a missing/expired session
    just surfaces as the generic 3-failures error state (see Security below) —
    there's no in-app way to re-run `scrape.js --login` yet.
-8. `electron-builder --win` → NSIS installer. **Not built** — no
-   `electron-builder` devDependency or build config yet. After the first
-   packaged build, check the notification sender name — in dev mode toasts
-   show "Electron" because there's no Start Menu shortcut registered with the
-   `com.pan.leb2buddy` AppUserModelID yet (`setAppUserModelId` alone isn't
-   enough; Windows resolves the toast's display name from a shortcut). Should
-   self-resolve once the NSIS installer creates that shortcut.
+8. ~~`electron-builder --win` → NSIS installer~~ **done.** Three packaging
+   problems solved:
+   - `cycle.js` spawned `node scrape.js`, but a packaged app has no `node`
+     binary — now spawns `process.execPath` with `ELECTRON_RUN_AS_NODE=1`.
+   - `scrape.js` can't run from inside `app.asar` (Playwright needs a real
+     path to spawn a browser) — unpacked via `asarUnpack`, alongside
+     `playwright`/`playwright-core`; `cycle.js` resolves its path from
+     `process.resourcesPath` when `app.isPackaged`.
+   - `better-sqlite3` needed no rebuild — it ships true N-API prebuilds
+     (`NAPI_VERSION=10`, no per-Node-version binary), so `npmRebuild: false`
+     is both correct and necessary (this dev machine has no MSVC toolchain
+     to rebuild anything with anyway).
+   - NSIS target, `perMachine: false` (per-user install, no admin prompt).
+   - Check the notification sender name after installing — in dev mode
+     toasts show "Electron" because there's no Start Menu shortcut registered
+     with the `com.pan.leb2buddy` AppUserModelID yet (`setAppUserModelId`
+     alone isn't enough; Windows resolves the toast's display name from a
+     shortcut). Should self-resolve once the NSIS installer creates that
+     shortcut — **verify this on the first real install.**
 9. `electron-updater` → GitHub Releases (needed *before* distributing; when LEB2
    changes their HTML, every copy breaks the same day). **Not built.**
 

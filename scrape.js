@@ -107,11 +107,19 @@ async function getActivities(page, classId) {
 }
 
 (async () => {
-  const ctx = await chromium.launchPersistentContext(PROFILE_DIR, {
-    headless: !LOGIN_MODE,
-    channel: 'chrome',        // use installed Chrome; drop this line if it errors
-    viewport: { width: 1400, height: 900 },
-  });
+  let ctx;
+  try {
+    ctx = await chromium.launchPersistentContext(PROFILE_DIR, {
+      headless: !LOGIN_MODE,
+      channel: 'chrome',        // use installed Chrome; drop this line if it errors
+      viewport: { width: 1400, height: 900 },
+    });
+  } catch (err) {
+    if (/chrome/i.test(err.message) && /not found|doesn't exist|distribution/i.test(err.message)) {
+      throw new Error('Google Chrome is required but was not found on this PC. Install it from https://www.google.com/chrome/ and try again.');
+    }
+    throw err;
+  }
 
   const page = ctx.pages()[0] || (await ctx.newPage());
 
