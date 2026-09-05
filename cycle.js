@@ -17,6 +17,19 @@ const { notifyEvents, checkFailureStreak } = require('./notify.js');
 const electronApp = require('electron').app;
 
 const SCRAPE_TIMEOUT_MS = 120000;
+// scrape.js's own --login wait is 300000ms (see scrape.js) — this must stay
+// longer than that or the spawn gets killed before scrape.js's own timeout
+// would have fired.
+const LOGIN_TIMEOUT_MS = 360000;
+
+// Playwright's own error formatting embeds ANSI SGR codes (e.g. dimming a
+// "Call log:" section) that survive into scrape.js's stderr regardless of
+// TTY, and read as literal `[2m`/`[22m` text once they reach the UI or the
+// database instead of a terminal. Stripped once here — the single funnel for
+// every child-process error — so no error path can leak them again.
+function stripAnsi(str) {
+  return str.replace(/\x1b\[[0-9;]*m/g, '');
+}
 
 // A packaged app has no scrape.js inside app.asar (Playwright can't launch
 // from the asar virtual FS — see package.json's asarUnpack) and no `node`
@@ -48,7 +61,25 @@ async function runScrape() {
     });
     return JSON.parse(stdout);
   } catch (err) {
-    throw new Error((err.stderr || err.message || String(err)).trim());
+    throw new Error(stripAnsi((err.stderr || err.message || String(err)).trim()));
+  }
+}
+
+// Runs scrape.js --login in a visible window (see step 7's Connect/Reconnect
+// flow) and reports success/failure — never throws, so the IPC caller always
+// gets a clean { ok, error } to show the user rather than an IPC rejection.
+async function runLogin() {
+  const scrapePath = resolveScrapePath();
+  try {
+    await execFileAsync(process.execPath, [scrapePath, '--login'], {
+      cwd: path.dirname(scrapePath),
+      maxBuffer: 10 * 1024 * 1024,
+      timeout: LOGIN_TIMEOUT_MS,
+      env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' },
+    });
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: stripAnsi((err.stderr || err.message || String(err)).trim()) };
   }
 }
 
@@ -74,4 +105,4 @@ async function runCycle(db, scrapeFn = runScrape) {
   }
 }
 
-module.exports = { runCycle };
+module.exports = { runCycle, runLogin };

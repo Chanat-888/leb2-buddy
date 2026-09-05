@@ -3,9 +3,10 @@
 // so the 3h scheduler keeps running after the window is closed.
 
 const path = require('path');
-const { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain } = require('electron');
+const { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, shell } = require('electron');
 
 const { openDb, getSetting, setSetting, dismissAssignment } = require('./db.js');
+const { runLogin } = require('./cycle.js');
 const { startScheduler } = require('./scheduler.js');
 const { getDashboardData } = require('./dashboard.js');
 const { sendTestMessage, postSummaryToDiscord } = require('./notify.js');
@@ -104,6 +105,8 @@ if (!app.requestSingleInstanceLock()) {
     ipcMain.handle('dashboard:get', () => getDashboardData(db));
     ipcMain.handle('cycle:run', () => triggerNow());
     ipcMain.handle('assignments:dismiss', (e, kind, itemId) => dismissAssignment(db, kind, itemId));
+    ipcMain.handle('auth:connect', () => runLogin());
+    ipcMain.handle('shell:openExternal', (e, url) => shell.openExternal(url));
     ipcMain.handle('settings:getDiscordWebhookUrl', () => getSetting(db, 'discordWebhookUrl'));
     ipcMain.handle('settings:setDiscordWebhookUrl', (e, url) => setSetting(db, 'discordWebhookUrl', url));
     ipcMain.handle('settings:sendTestDiscordMessage', (e, url) => sendTestMessage(url));

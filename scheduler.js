@@ -3,6 +3,7 @@
 // calls startScheduler(db) once the app is ready.
 
 const { runCycle } = require('./cycle.js');
+const { hasSucceededOnce } = require('./db.js');
 
 const THREE_HOURS_MS = 3 * 60 * 60 * 1000;
 
@@ -37,6 +38,10 @@ function startScheduler(db, { intervalMs = THREE_HOURS_MS, cycleFn = runCycle } 
   };
 
   const tick = async () => {
+    // Before the first-ever Connect (step 7), there's no session to scrape
+    // with — don't burn a Chrome launch every interval, and don't let a
+    // string of pre-connect failures trip the 3-in-a-row failure toast.
+    if (!hasSucceededOnce(db)) return;
     if (!isDue(db, intervalMs)) return;
     await runNow();
   };

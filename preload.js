@@ -8,6 +8,8 @@ contextBridge.exposeInMainWorld('leb2', {
   getDashboard: () => ipcRenderer.invoke('dashboard:get'),
   runCycle: () => ipcRenderer.invoke('cycle:run'),
   dismissAssignment: (kind, itemId) => ipcRenderer.invoke('assignments:dismiss', kind, itemId),
+  connectLeb2: () => ipcRenderer.invoke('auth:connect'),
+  openExternal: (url) => ipcRenderer.invoke('shell:openExternal', url),
   getDiscordWebhookUrl: () => ipcRenderer.invoke('settings:getDiscordWebhookUrl'),
   setDiscordWebhookUrl: (url) => ipcRenderer.invoke('settings:setDiscordWebhookUrl', url),
   sendTestDiscordMessage: (url) => ipcRenderer.invoke('settings:sendTestDiscordMessage', url),

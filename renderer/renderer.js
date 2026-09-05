@@ -35,6 +35,14 @@ const settingsTestBtn = document.getElementById('settings-test-btn');
 const settingsSendSummaryBtn = document.getElementById('settings-send-summary-btn');
 const settingsStatusEl = document.getElementById('settings-status');
 
+const connectViewEl = document.getElementById('connect-view');
+const dashboardViewEl = document.getElementById('dashboard-view');
+const connectBtn = document.getElementById('connect-btn');
+const connectStatusEl = document.getElementById('connect-status');
+const reconnectBanner = document.getElementById('reconnect-banner');
+const reconnectBtn = document.getElementById('reconnect-btn');
+const reconnectStatusEl = document.getElementById('reconnect-status');
+
 function updateSendSummaryDisabled() {
   settingsSendSummaryBtn.disabled = discordWebhookInput.value.trim() === '';
 }
@@ -143,7 +151,57 @@ function renderUpcoming(upcoming) {
   return section;
 }
 
+// Renders an error message from the Connect/Reconnect flow into `el`. The
+// Chrome-missing message (see scrape.js/step 8) gets a real clickable link
+// instead of the raw sentence with a bare URL in it.
+function renderConnectError(el, message) {
+  el.innerHTML = '';
+  if (message.includes('Google Chrome is required')) {
+    el.append("Google Chrome is required but wasn't found on this PC. ");
+    const link = document.createElement('a');
+    link.href = '#';
+    link.textContent = 'Download Chrome';
+    link.addEventListener('click', (e) => {
+      e.preventDefault();
+      window.leb2.openExternal('https://www.google.com/chrome/');
+    });
+    el.append(link);
+  } else if (/context or browser has been closed|target closed/i.test(message)) {
+    // The user closed the login window instead of signing in — Playwright's
+    // own wording for this ("Target page, context or browser has been
+    // closed") is internal jargon, not something to show someone.
+    el.textContent = 'Sign-in was cancelled. Click the button above to try again.';
+  } else {
+    el.textContent = message;
+  }
+}
+
+// Shared by the Connect screen's button and the Reconnect banner's button —
+// both run the exact same scrape.js --login flow, then a normal cycle.
+async function runConnectFlow(button, statusEl) {
+  button.disabled = true;
+  statusEl.textContent = '';
+  statusEl.textContent = 'Sign in to LEB2 in the window that opened…';
+  const result = await window.leb2.connectLeb2();
+  if (result.ok) {
+    statusEl.textContent = 'Connected! Checking for assignments…';
+    await window.leb2.runCycle();
+    await refresh();
+  } else {
+    renderConnectError(statusEl, result.error);
+    button.disabled = false;
+  }
+}
+
+connectBtn.addEventListener('click', () => runConnectFlow(connectBtn, connectStatusEl));
+reconnectBtn.addEventListener('click', () => runConnectFlow(reconnectBtn, reconnectStatusEl));
+
 function render(data) {
+  const connected = data.auth.connected;
+  connectViewEl.hidden = connected;
+  dashboardViewEl.hidden = !connected;
+  if (!connected) return; // nothing else to render until they've connected
+
   characterEl.className = `character state-${data.character.state}`;
   characterLabelEl.textContent = data.character.label;
 
@@ -151,7 +209,11 @@ function render(data) {
     ? `Last checked ${formatBangkok(data.lastRun.started_at)}`
     : 'Never checked yet';
 
-  const lastRunFailed = data.lastRun && !data.lastRun.ok;
+  reconnectBanner.hidden = !data.auth.needsReconnect;
+
+  // The generic error banner doesn't apply to an expired session — that
+  // gets the distinct Reconnect banner above instead (see step 7).
+  const lastRunFailed = data.lastRun && !data.lastRun.ok && !data.auth.needsReconnect;
   errorBannerEl.hidden = !lastRunFailed;
   if (lastRunFailed) {
     errorBannerEl.textContent = `Last check failed: ${data.lastRun.error || 'unknown error'}`;

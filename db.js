@@ -176,6 +176,13 @@ function setSetting(db, key, value) {
   `).run(key, value);
 }
 
+// True once any scrape has ever succeeded — the signal for "has this
+// install ever been connected to LEB2" (see step 7's Connect flow), not just
+// "did the most recent run succeed."
+function hasSucceededOnce(db) {
+  return !!db.prepare(`SELECT 1 FROM scrape_runs WHERE ok = 1 LIMIT 1`).get();
+}
+
 // Hides an assignment from Missed permanently. Never deletes the row, and
 // upsertAssignment never touches dismissed_at, so a re-scrape can't
 // resurrect it.
@@ -192,5 +199,6 @@ module.exports = {
   getSetting,
   setSetting,
   dismissAssignment,
+  hasSucceededOnce,
   DEFAULT_DB_PATH,
 };

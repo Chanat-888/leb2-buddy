@@ -6,34 +6,53 @@
 <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div id="character" class="character">
-    <div id="character-label" class="character-label">Loading…</div>
+  <div id="connect-view" class="connect-view" hidden>
+    <p class="connect-text">
+      LEB2 Buddy needs to sign in to your LEB2 account to check your
+      assignments. Click below to open a sign-in window — your KMUTT
+      credentials go straight to Microsoft's own sign-in page, never through
+      this app.
+    </p>
+    <button id="connect-btn" class="connect-btn">Connect LEB2</button>
+    <div id="connect-status" class="connect-status"></div>
   </div>
 
-  <div class="toolbar">
-    <span id="last-checked" class="last-checked"></span>
-    <div class="toolbar-buttons">
-      <button id="refresh-btn">Check now</button>
-      <button id="settings-btn" title="Settings">⚙</button>
+  <div id="dashboard-view" hidden>
+    <div id="character" class="character">
+      <div id="character-label" class="character-label">Loading…</div>
     </div>
+
+    <div class="toolbar">
+      <span id="last-checked" class="last-checked"></span>
+      <div class="toolbar-buttons">
+        <button id="refresh-btn">Check now</button>
+        <button id="settings-btn" title="Settings">⚙</button>
+      </div>
+    </div>
+
+    <div id="settings-panel" class="settings-panel" hidden>
+      <label for="discord-webhook-input">Discord webhook URL</label>
+      <div class="settings-webhook-row">
+        <input id="discord-webhook-input" type="text" placeholder="https://discord.com/api/webhooks/..." />
+        <button id="settings-test-btn">Send test message</button>
+      </div>
+      <div class="settings-panel-actions">
+        <button id="settings-save-btn">Save</button>
+        <button id="settings-send-summary-btn">Send summary to Discord</button>
+        <span id="settings-status" class="settings-status"></span>
+      </div>
+    </div>
+
+    <div id="reconnect-banner" class="reconnect-banner" hidden>
+      <span>Your LEB2 session expired. Reconnect to keep checking for assignments.</span>
+      <button id="reconnect-btn" class="reconnect-btn">Reconnect</button>
+      <div id="reconnect-status" class="connect-status"></div>
+    </div>
+
+    <div id="error-banner" class="error-banner" hidden></div>
+
+    <div id="today-list" class="today-list"></div>
   </div>
-
-  <div id="settings-panel" class="settings-panel" hidden>
-    <label for="discord-webhook-input">Discord webhook URL</label>
-    <div class="settings-webhook-row">
-      <input id="discord-webhook-input" type="text" placeholder="https://discord.com/api/webhooks/..." />
-      <button id="settings-test-btn">Send test message</button>
-    </div>
-    <div class="settings-panel-actions">
-      <button id="settings-save-btn">Save</button>
-      <button id="settings-send-summary-btn">Send summary to Discord</button>
-      <span id="settings-status" class="settings-status"></span>
-    </div>
-  </div>
-
-  <div id="error-banner" class="error-banner" hidden></div>
-
-  <div id="today-list" class="today-list"></div>
 
   <script src="renderer.js"></script>
 </body>

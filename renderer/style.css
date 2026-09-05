@@ -13,6 +13,16 @@
 
 * { box-sizing: border-box; }
 
+/* Several components below set their own unconditional `display` (flex,
+   grid, ...) for layout, which — at equal-or-higher specificity and same
+   author origin — silently overrides the browser's built-in
+   `[hidden] { display: none }` rule. Without this, toggling `.hidden = true`
+   in JS stops actually hiding anything. Restore it globally so no future
+   component can reintroduce this bug. */
+[hidden] {
+  display: none !important;
+}
+
 body {
   margin: 0;
   font-family: -apple-system, "Segoe UI", sans-serif;
@@ -177,6 +187,88 @@ body {
   background: #3a1f1f;
   color: #ff9d94;
   font-size: 12px;
+}
+
+.connect-view {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 32px;
+  gap: 16px;
+}
+
+#dashboard-view {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.connect-text {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.connect-btn {
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 10px 20px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.connect-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.connect-status {
+  font-size: 12px;
+  color: var(--muted);
+  min-height: 1em;
+}
+
+.connect-status a {
+  color: var(--accent);
+}
+
+.reconnect-banner {
+  margin: 0 16px 8px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: #3a301a;
+  color: var(--warning);
+  font-size: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.reconnect-btn {
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.reconnect-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.reconnect-banner .connect-status {
+  flex-basis: 100%;
 }
 
 .today-list {

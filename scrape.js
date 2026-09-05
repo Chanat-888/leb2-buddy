@@ -4,6 +4,7 @@
 
 const path = require('path');
 const os = require('os');
+const fs = require('fs');
 const { chromium } = require('playwright');
 
 const LOGIN_MODE = process.argv.includes('--login');
@@ -107,6 +108,12 @@ async function getActivities(page, classId) {
 }
 
 (async () => {
+  // Fresh machine: ~/.leb2-buddy/ exists (db.js creates it), but
+  // browser-profile itself may not. Chromium usually creates a missing
+  // user-data-dir on its own, but don't depend on that — create it
+  // explicitly so a first-ever --login never errors on a missing directory.
+  fs.mkdirSync(PROFILE_DIR, { recursive: true });
+
   let ctx;
   try {
     ctx = await chromium.launchPersistentContext(PROFILE_DIR, {

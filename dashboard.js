@@ -4,6 +4,7 @@
 // diff.js/db.js.
 
 const { currentFailureStreak } = require('./notify.js');
+const { hasSucceededOnce } = require('./db.js');
 
 const HOUR_MS = 3600 * 1000;
 const DAY_MS = 24 * HOUR_MS;
@@ -165,10 +166,15 @@ function getDashboardData(db, nowMs = Date.now()) {
     `SELECT started_at, ok, error FROM scrape_runs ORDER BY id DESC LIMIT 1`
   ).get() || null;
 
+  // "Not logged in" is the exact string scrape.js's getClasses() throws when
+  // the session is missing/expired — see step 7's Connect/Reconnect flow.
+  const needsReconnect = !!lastRun && !lastRun.ok && /Not logged in/.test(lastRun.error || '');
+
   return {
     character: getCharacterState(db, assignments, nowMs),
     week: getWeekView(assignments, nowMs),
     lastRun,
+    auth: { connected: hasSucceededOnce(db), needsReconnect },
   };
 }
 

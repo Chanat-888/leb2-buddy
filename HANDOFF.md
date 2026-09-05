@@ -168,10 +168,27 @@ Rules:
 5. ~~Scheduler — `setInterval` + run-on-launch + `app.setLoginItemSettings`~~ **done**
 6. ~~UI — Electron window on the same SQLite file: character, 7-day agenda,
    Missed, Upcoming~~ **done**
-7. First-run screen — "Connect LEB2" → headed Playwright → wait for
-   `.class-card` → close. **Not built.** Right now a missing/expired session
-   just surfaces as the generic 3-failures error state (see Security below) —
-   there's no in-app way to re-run `scrape.js --login` yet.
+7. ~~First-run screen — "Connect LEB2" → headed Playwright → wait for
+   `.class-card` → close~~ **done.** `cycle.js`'s `runLogin()` spawns
+   `scrape.js --login` the same way `runScrape()` spawns a normal scrape
+   (same `process.execPath` + `ELECTRON_RUN_AS_NODE` + asar-unpack path
+   resolution from step 8), just with a longer timeout since scrape.js's own
+   login wait is 5 minutes. Two states, driven off `scrape_runs` in
+   `dashboard.js`'s new `auth` field:
+   - **Never connected** (`db.hasSucceededOnce` false) — the dashboard is
+     replaced entirely by a Connect screen. `scheduler.js` also skips its
+     automatic tick in this state, so a fresh install doesn't burn a Chrome
+     launch every 3 hours or trip the failure-streak toast before the user
+     has even tried to connect.
+   - **Session expired** (`auth.needsReconnect` — last run failed with the
+     `"Not logged in"` string `scrape.js` already throws) — the dashboard
+     keeps showing last-known assignments, with a distinct Reconnect banner
+     in place of the generic error banner.
+   Both states share one `runConnectFlow()` in the renderer. A
+   Chrome-missing failure during login reuses step 8's friendly error text,
+   rendered as a real "Download Chrome" link. `scrape.js` also now
+   `mkdirSync`s the profile dir defensively before launching, for a truly
+   fresh machine.
 8. ~~`electron-builder --win` → NSIS installer~~ **done.** Three packaging
    problems solved:
    - `cycle.js` spawned `node scrape.js`, but a packaged app has no `node`
@@ -208,9 +225,7 @@ Rules:
   copy against their own browser profile.
 - Handle "session expired" as a visible UI state with a Reconnect button. Users
   hit this monthly; silent failure means they think it works while it shows
-  nothing. **Still open** — `scrape.js` already distinguishes "not logged in"
-  in its error message, but the UI doesn't surface it distinctly from any
-  other failure yet. This is step 7's job.
+  nothing. **Done in step 7** — the dashboard's Reconnect banner.
 
 ## Open questions for the user
 
