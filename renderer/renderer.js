@@ -42,7 +42,14 @@ function updateSendSummaryDisabled() {
 discordWebhookInput.addEventListener('input', updateSendSummaryDisabled);
 updateSendSummaryDisabled();
 
-function renderTodayItem(item) {
+// Load the saved webhook URL as soon as the page starts, not just when the
+// settings panel happens to be opened.
+window.leb2.getDiscordWebhookUrl().then((url) => {
+  discordWebhookInput.value = url || '';
+  updateSendSummaryDisabled();
+});
+
+function renderTodayItem(item, dismissible) {
   const li = document.createElement('li');
   li.className = item.submitted ? 'submitted' : '';
 
@@ -63,10 +70,24 @@ function renderTodayItem(item) {
   due.textContent = formatBangkok(item.dueAt);
 
   li.append(check, code, title, due);
+
+  if (dismissible) {
+    const dismiss = document.createElement('button');
+    dismiss.type = 'button';
+    dismiss.className = 'dismiss-btn';
+    dismiss.title = 'Dismiss';
+    dismiss.textContent = '×';
+    dismiss.addEventListener('click', async () => {
+      await window.leb2.dismissAssignment(item.kind, item.itemId);
+      refresh();
+    });
+    li.append(dismiss);
+  }
+
   return li;
 }
 
-function renderGroup(label, items, extraClass) {
+function renderGroup(label, items, extraClass, dismissible) {
   const group = document.createElement('div');
   group.className = extraClass ? `day-group ${extraClass}` : 'day-group';
 
@@ -76,7 +97,7 @@ function renderGroup(label, items, extraClass) {
 
   const list = document.createElement('ul');
   for (const item of items) {
-    list.appendChild(renderTodayItem(item));
+    list.appendChild(renderTodayItem(item, dismissible));
   }
 
   group.append(header, list);
@@ -152,7 +173,7 @@ function render(data) {
       todayListEl.appendChild(renderGroup(day.label, day.items));
     }
     if (missed.length > 0) {
-      todayListEl.appendChild(renderGroup('Missed', missed, 'missed-group'));
+      todayListEl.appendChild(renderGroup('Missed', missed, 'missed-group', true));
     }
     const upcomingEl = renderUpcoming(upcoming);
     if (upcomingEl) todayListEl.appendChild(upcomingEl);

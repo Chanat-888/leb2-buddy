@@ -32,6 +32,7 @@ CREATE TABLE IF NOT EXISTS assignments (
   url             TEXT NOT NULL,
   first_seen      TEXT NOT NULL,
   last_seen       TEXT NOT NULL,
+  dismissed_at    TEXT,
   PRIMARY KEY (kind, item_id)
 );
 
@@ -50,11 +51,22 @@ CREATE TABLE IF NOT EXISTS settings (
 );
 `;
 
+// CREATE TABLE IF NOT EXISTS never adds columns to a table that already
+// exists from before this column was added — so existing DBs need an
+// explicit ALTER TABLE.
+function migrate(db) {
+  const cols = db.prepare(`PRAGMA table_info(assignments)`).all();
+  if (!cols.some((c) => c.name === 'dismissed_at')) {
+    db.exec(`ALTER TABLE assignments ADD COLUMN dismissed_at TEXT`);
+  }
+}
+
 function openDb(dbPath = DEFAULT_DB_PATH) {
   fs.mkdirSync(path.dirname(dbPath), { recursive: true });
   const db = new Database(dbPath);
   db.pragma('journal_mode = WAL');
   db.exec(SCHEMA);
+  migrate(db);
   return db;
 }
 
@@ -164,4 +176,21 @@ function setSetting(db, key, value) {
   `).run(key, value);
 }
 
-module.exports = { openDb, saveScrape, recordFailedScrape, getSetting, setSetting, DEFAULT_DB_PATH };
+// Hides an assignment from Missed permanently. Never deletes the row, and
+// upsertAssignment never touches dismissed_at, so a re-scrape can't
+// resurrect it.
+function dismissAssignment(db, kind, itemId) {
+  db.prepare(`
+    UPDATE assignments SET dismissed_at = ? WHERE kind = ? AND item_id = ?
+  `).run(new Date().toISOString(), kind, itemId);
+}
+
+module.exports = {
+  openDb,
+  saveScrape,
+  recordFailedScrape,
+  getSetting,
+  setSetting,
+  dismissAssignment,
+  DEFAULT_DB_PATH,
+};

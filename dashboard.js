@@ -60,6 +60,8 @@ function getCharacterState(db, assignments, nowMs) {
 
 function toListItem(a) {
   return {
+    kind: a.kind,
+    itemId: a.item_id,
     classCode: a.code,
     title: a.title,
     dueAt: a.due_at,
@@ -143,7 +145,7 @@ function getWeekView(assignments, nowMs) {
 
   const missed = assignments
     .filter((a) => {
-      if (a.submitted || !a.due_at) return false;
+      if (a.submitted || !a.due_at || a.dismissed_at) return false;
       return nowMs - new Date(a.due_at).getTime() >= MISSED_THRESHOLD_MS;
     })
     .sort((a, b) => new Date(a.due_at) - new Date(b.due_at))
